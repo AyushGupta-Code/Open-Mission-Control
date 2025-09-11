@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: omc
+      POSTGRES_PASSWORD: omc
+      POSTGRES_DB: omc
+    ports:
+      - "5432:5432"
+
+  nats:
+    image: nats:2.9
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command:
+      - start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
