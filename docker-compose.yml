@@ -1,7 +1,9 @@
-version: '3.9'
+version: "3.9"
+
 services:
   postgres:
     image: postgres:15
+    container_name: omc-postgres
     restart: always
     environment:
       POSTGRES_USER: omc
@@ -9,19 +11,37 @@ services:
       POSTGRES_DB: omc
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-  nats:
-    image: nats:2.9
+  api-gateway:
+    image: golang:1.21
+    container_name: omc-api-gateway
+    working_dir: /app
+    volumes:
+      - ./backend/api-gateway:/app
+    command: ["go", "run", "main.go"]
+    environment:
+      DATABASE_URL: postgres://omc:omc@postgres:5432/omc?sslmode=disable
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/open-mission-control
+      KEYCLOAK_CLIENT_ID: omc-api
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - keycloak
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
-    command:
-      - start-dev
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: omc-keycloak
+    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak-config:/opt/keycloak/data/import
     ports:
       - "8081:8080"
+
+volumes:
+  postgres_data:

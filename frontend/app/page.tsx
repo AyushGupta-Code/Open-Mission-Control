@@ -1,103 +1,142 @@
-import Image from "next/image";
+"use client"
+
+import Image from "next/image"
+import { useSession, signIn, signOut } from "next-auth/react"
+import { jwtDecode } from "jwt-decode"
+import { useEffect, useState } from "react"
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { data: session } = useSession()
+  const [missions, setMissions] = useState<any[]>([])
+  const [apiError, setApiError] = useState<string | null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // Decode JWT to check roles
+  let decodedToken: any = null
+  if (session && (session as any).accessToken) {
+    try {
+      decodedToken = jwtDecode((session as any).accessToken)
+    } catch (err) {
+      console.error("Failed to decode token", err)
+    }
+  }
+
+  const roles =
+    decodedToken?.realm_access?.roles || ([] as string[])
+  const isAdmin = roles.includes("admin")
+
+  // Fetch missions
+  useEffect(() => {
+    const fetchMissions = async () => {
+      if (!session) return
+      try {
+        const res = await fetch("http://localhost:8080/missions", {
+          headers: {
+            Authorization: `Bearer ${(session as any).accessToken}`,
+          },
+        })
+        if (!res.ok) {
+          throw new Error(await res.text())
+        }
+        const data = await res.json()
+        setMissions(data)
+      } catch (err: any) {
+        setApiError(err.message || "Failed to fetch missions")
+      }
+    }
+    fetchMissions()
+  }, [session])
+
+  // Handlers for admin actions
+  const addMission = async () => {
+    const res = await fetch("http://localhost:8080/missions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${(session as any).accessToken}`,
+      },
+      body: JSON.stringify({ name: "New Mission", status: "planned" }),
+    })
+    const newMission = await res.json()
+    setMissions((prev) => [...prev, newMission])
+  }
+
+  const deleteMission = async (id: string) => {
+    await fetch(`http://localhost:8080/missions/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${(session as any).accessToken}`,
+      },
+    })
+    setMissions((prev) => prev.filter((m) => m.id !== id))
+  }
+
+  return (
+    <div className="font-sans min-h-screen p-8 bg-black text-white">
+      {!session ? (
+        <div className="flex flex-col items-center">
+          <p className="text-red-400">Not signed in</p>
+          <button
+            onClick={() => signIn("keycloak")}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Sign in with Keycloak
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      ) : (
+        <>
+          <h1 className="text-xl font-bold">
+            Welcome {session.user?.email}
+          </h1>
+
+          {/* Missions */}
+          <section className="mt-6">
+            <h2 className="text-lg font-semibold">Missions</h2>
+            {apiError ? (
+              <p className="text-red-400">API Error: {apiError}</p>
+            ) : (
+              <ul className="list-disc ml-6">
+                {missions.map((m) => (
+                  <li key={m.id}>
+                    {m.name} — <i>{m.status}</i>
+                    {isAdmin && (
+                      <button
+                        onClick={() => deleteMission(m.id)}
+                        className="ml-2 px-2 py-1 text-xs bg-red-600 rounded"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={addMission}
+                className="mt-4 px-4 py-2 bg-green-600 rounded"
+              >
+                ➕ Add Mission
+              </button>
+            )}
+          </section>
+
+          {/* Debug: decoded JWT */}
+          {decodedToken && (
+            <section className="mt-6 p-4 bg-gray-900 rounded text-xs overflow-x-auto">
+              <h3 className="font-bold mb-2">Decoded JWT:</h3>
+              <pre>{JSON.stringify(decodedToken, null, 2)}</pre>
+            </section>
+          )}
+
+          <button
+            onClick={() => signOut()}
+            className="mt-6 px-4 py-2 bg-red-600 rounded"
+          >
+            Sign out
+          </button>
+        </>
+      )}
     </div>
-  );
+  )
 }

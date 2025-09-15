@@ -1,0 +1,36 @@
+{
+  "realm": "open-mission-control",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "open-mission-control-frontend",
+      "publicClient": true,
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "omc-api",
+      "secret": "my-api-secret",
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+  {
+    "username": "testuser",
+    "enabled": true,
+    "emailVerified": true,
+    "firstName": "Test",
+    "lastName": "User",
+    "email": "test@example.com",
+    "credentials": [
+      {
+        "type": "password",
+        "value": "password",
+        "temporary": false
+      }
+    ]
+  }
+]
+}
